@@ -1,0 +1,163 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Palette lifted from the wireframe. -->
+    <Color x:Key="BgColor">#FF161826</Color>
+    <Color x:Key="AccentColor">#FF9184D9</Color>
+
+    <SolidColorBrush x:Key="Bg" Color="#FF161826" />
+    <SolidColorBrush x:Key="BgSunken" Color="#FF12131C" />
+    <SolidColorBrush x:Key="Hairline" Color="#29E9E9ED" />
+    <SolidColorBrush x:Key="Fg" Color="#FFE9E9ED" />
+    <SolidColorBrush x:Key="FgBright" Color="#FFF5F4FF" />
+    <SolidColorBrush x:Key="FgSoft" Color="#FFCFD3E5" />
+    <SolidColorBrush x:Key="FgQuiet" Color="#FFB2B6CA" />
+    <SolidColorBrush x:Key="FgMuted" Color="#FF9397AB" />
+    <SolidColorBrush x:Key="FgDim" Color="#FF75798C" />
+    <SolidColorBrush x:Key="FgFaint" Color="#FF595D6C" />
+    <SolidColorBrush x:Key="Edge" Color="#FF3F424D" />
+    <SolidColorBrush x:Key="EdgeStrong" Color="#FF595D6C" />
+    <SolidColorBrush x:Key="Accent" Color="#FF9184D9" />
+    <SolidColorBrush x:Key="AccentBright" Color="#FFB5ABFC" />
+    <SolidColorBrush x:Key="AccentPale" Color="#FFD2CEFD" />
+    <SolidColorBrush x:Key="AccentDeep" Color="#FF796CBF" />
+    <SolidColorBrush x:Key="AccentDim" Color="#FF5D5294" />
+    <SolidColorBrush x:Key="AccentWash" Color="#1F9184D9" />
+    <SolidColorBrush x:Key="AccentWashSoft" Color="#149184D9" />
+    <SolidColorBrush x:Key="TrackBrush" Color="#1FE9E9ED" />
+    <SolidColorBrush x:Key="Black" Color="#FF000000" />
+
+    <FontFamily x:Key="UiFont">Inter, Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas, Courier New</FontFamily>
+
+    <!-- Chrome button: quiet outline that warms up on hover. -->
+    <Style x:Key="ChromeButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{StaticResource Edge}" />
+        <Setter Property="Foreground" Value="{StaticResource FgSoft}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="Height" Value="26" />
+        <Setter Property="MinWidth" Value="34" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Margin="{TemplateBinding Padding}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentDeep}" />
+                            <Setter Property="Foreground" Value="{StaticResource FgBright}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentWash}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The primary action in each transport group. -->
+    <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource ChromeButton}">
+        <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+        <Setter Property="Foreground" Value="{StaticResource AccentPale}" />
+        <Setter Property="MinWidth" Value="40" />
+    </Style>
+
+    <Style x:Key="AccentDimButton" TargetType="Button" BasedOn="{StaticResource ChromeButton}">
+        <Setter Property="BorderBrush" Value="{StaticResource AccentDim}" />
+        <Setter Property="Foreground" Value="{StaticResource AccentBright}" />
+        <Setter Property="MinWidth" Value="40" />
+    </Style>
+
+    <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource ChromeButton}">
+        <Setter Property="Height" Value="22" />
+        <Setter Property="Width" Value="22" />
+        <Setter Property="MinWidth" Value="22" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Foreground" Value="{StaticResource FgMuted}" />
+    </Style>
+
+    <Style x:Key="HeaderChip" TargetType="Button" BasedOn="{StaticResource ChromeButton}">
+        <Setter Property="Height" Value="22" />
+        <Setter Property="Foreground" Value="{StaticResource FgMuted}" />
+    </Style>
+
+    <!-- Section label: uppercase, tracked out. -->
+    <Style x:Key="Eyebrow" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{StaticResource FgMuted}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="Meta" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{StaticResource FgDim}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="KeyCap" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="FontSize" Value="9" />
+        <Setter Property="Foreground" Value="{StaticResource FgFaint}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+
+    <Style TargetType="ScrollBar">
+        <Setter Property="Width" Value="8" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid Background="Transparent">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="#33E9E9ED" CornerRadius="4" Margin="2,0" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" />
+                            </Track.DecreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="DarkCombo" TargetType="ComboBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource FgMuted}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Edge}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="Focusable" Value="False" />
+    </Style>
+
+</ResourceDictionary>

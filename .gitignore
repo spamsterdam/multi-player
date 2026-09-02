@@ -1,0 +1,11 @@
+# build output
+bin/
+obj/
+*.user
+
+# generated test media and the playlists that point at it (see tools/make-samples.ps1)
+samples/*.mp4
+samples/*.mvp
+
+# per-playlist thumbnail cache
+.multiplayer/

@@ -1,0 +1,302 @@
+<Window x:Class="MultiPlayer.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:pb="clr-namespace:MultiPlayer.Playback"
+        Title="Multi-Video Player"
+        Height="900" Width="1500"
+        MinHeight="560" MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True"
+        AllowDrop="True"
+        FontFamily="{StaticResource UiFont}"
+        FontSize="13"
+        Foreground="{StaticResource Fg}"
+        Background="{StaticResource Bg}">
+
+    <!--
+        Root holds two arrangements. In single-screen mode Chrome is shown here with the
+        primary picture sitting in PrimarySlot. In multi-screen mode Chrome is moved
+        wholesale onto the wall window and PrimaryOnly takes over here, so the primary
+        display carries nothing but picture and a fullscreen control.
+    -->
+    <Grid x:Name="Root">
+
+        <Grid x:Name="Chrome">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="SidebarColumn" Width="236" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ── playlist ─────────────────────────────────────────────── -->
+            <Border x:Name="Sidebar" Grid.Column="0"
+                    BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Height="40"
+                            BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1">
+                        <Grid Margin="17,0,11,0">
+                            <TextBlock Style="{StaticResource Eyebrow}" Text="PLAYLIST" />
+                            <Button x:Name="HideSidebarButton" Style="{StaticResource IconButton}"
+                                    HorizontalAlignment="Right" ToolTip="Hide playlist" Content="&#x2039;" />
+                        </Grid>
+                    </Border>
+
+                    <Border DockPanel.Dock="Bottom" Padding="17,11"
+                            BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0">
+                        <StackPanel>
+                            <Button x:Name="AddButton" Style="{StaticResource AccentButton}"
+                                    Height="28" Content="Add files…" />
+                            <Button x:Name="OpenButton" Style="{StaticResource ChromeButton}"
+                                    Height="26" Margin="0,7,0,0" Content="Open playlist…" />
+                            <Button x:Name="SaveButton" Style="{StaticResource ChromeButton}"
+                                    Height="26" Margin="0,7,0,0" Content="Save as .mvp…" />
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel DockPanel.Dock="Top" Margin="17,11,17,8">
+                        <TextBlock x:Name="PlaylistNameText" FontSize="13"
+                                   Foreground="{StaticResource Fg}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="PlaylistMetaText" Style="{StaticResource Meta}" Margin="0,3,0,0" />
+                    </StackPanel>
+
+                    <ListBox x:Name="PlaylistList" Margin="8,6,4,11"
+                             Background="Transparent" BorderThickness="0" Focusable="False"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="0,1" />
+                                <Setter Property="Focusable" Value="False" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <ContentPresenter />
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{Binding Background}" CornerRadius="4" Padding="8,5">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="18" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="34" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Number}" FontSize="11"
+                                                   TextAlignment="Right" Foreground="{StaticResource FgDim}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12" Margin="8,0"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{Binding Foreground}" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Slot}" FontSize="10"
+                                                   TextAlignment="Right" Foreground="{StaticResource AccentDeep}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <!-- ── control surface ──────────────────────────────────────── -->
+            <DockPanel Grid.Column="1">
+
+                <Border x:Name="HeaderBar" DockPanel.Dock="Top" Height="40"
+                        BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1">
+                    <StackPanel Orientation="Horizontal" Margin="17,0">
+                        <Button x:Name="ShowSidebarButton" Style="{StaticResource IconButton}"
+                                Visibility="Collapsed" Margin="0,0,17,0"
+                                ToolTip="Show playlist" Content="&#x203A;" />
+                        <TextBlock Style="{StaticResource Eyebrow}" FontSize="12" Text="MULTI-VIDEO PLAYER" />
+
+                        <StackPanel Orientation="Horizontal" Margin="24,0,0,0" VerticalAlignment="Center">
+                            <Button x:Name="PrevSetButton" Style="{StaticResource HeaderChip}"
+                                    ToolTip="Previous set (PgUp) — wraps round" Content="&#x2039; set" />
+                            <TextBlock x:Name="SetLabel" Style="{StaticResource Eyebrow}"
+                                       Foreground="{StaticResource FgQuiet}" Margin="9,0" Text="SET 1 / 1" />
+                            <Button x:Name="NextSetButton" Style="{StaticResource HeaderChip}"
+                                    ToolTip="Next set (PgDn) — wraps round" Content="set &#x203A;" />
+                        </StackPanel>
+
+                        <Button x:Name="AutoButton" Style="{StaticResource HeaderChip}" Margin="9,0,0,0"
+                                ToolTip="Advance the set on a timer — off / 60s / 30s / 10s (T)" Content="auto off" />
+
+                        <Border Width="1" Height="18" Margin="17,0"
+                                Background="{StaticResource Hairline}" VerticalAlignment="Center" />
+
+                        <Button x:Name="ModeButton" Style="{StaticResource HeaderChip}"
+                                ToolTip="Toggle single / multi-screen (D)" Content="switch to multi-screen" />
+
+                        <ComboBox x:Name="ScreenPicker" Style="{StaticResource DarkCombo}"
+                                  Margin="9,0,0,0" Width="190" Visibility="Collapsed"
+                                  ToolTip="Which display shows the numbered wall" />
+
+                        <Button x:Name="MuteButton" Style="{StaticResource HeaderChip}"
+                                Margin="9,0,0,0" ToolTip="Mute (M)" Content="mute" />
+
+                        <Button x:Name="HideButton" Style="{StaticResource HeaderChip}"
+                                Margin="9,0,0,0" ToolTip="Blank every screen and pause (Esc)" Content="hide" />
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="LegendBar" DockPanel.Dock="Bottom" Height="30"
+                        BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0">
+                    <Grid Margin="17,0">
+                        <TextBlock x:Name="LegendText" Style="{StaticResource Meta}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="LastActionText" Style="{StaticResource Meta}"
+                                   Foreground="{StaticResource AccentDeep}" HorizontalAlignment="Right"
+                                   Margin="12,0,0,0" />
+                    </Grid>
+                </Border>
+
+                <Border x:Name="FavoritesBar" DockPanel.Dock="Bottom" Padding="17,7"
+                        BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0">
+                    <DockPanel>
+                        <!-- Fixed widths: the label swaps to a longer prompt when armed, and
+                             the grid must not shuffle sideways when it does. -->
+                        <TextBlock x:Name="FavoritesLabel" DockPanel.Dock="Left" Width="118"
+                                   Style="{StaticResource Eyebrow}" Text="FAVORITES"
+                                   TextTrimming="CharacterEllipsis"
+                                   Margin="0,0,14,0" VerticalAlignment="Center" />
+                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource Meta}" Width="182"
+                                   TextAlignment="Right" VerticalAlignment="Center" Margin="14,0,0,0"
+                                   Text="` then 0-9 stores · 0-9 recalls" />
+                        <UniformGrid x:Name="FavoritesGrid" Rows="1" Columns="10" Height="52" />
+                    </DockPanel>
+                </Border>
+
+                <Grid x:Name="Stage" Margin="17">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="PrimaryColumn" Width="48*" MinWidth="240" />
+                        <ColumnDefinition x:Name="SplitColumn" Width="18" />
+                        <ColumnDefinition x:Name="TileColumn" Width="52*" MinWidth="260" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- primary -->
+                    <DockPanel x:Name="PrimarySection" Grid.Column="0">
+                        <ContentControl x:Name="PrimaryTransportSlot" DockPanel.Dock="Bottom" Margin="0,11,0,0">
+                            <StackPanel x:Name="PrimaryTransport" Orientation="Horizontal">
+                                <StackPanel Margin="0,0,6,0">
+                                    <Button x:Name="PrimaryRestart" Style="{StaticResource ChromeButton}"
+                                            ToolTip="Primary to start (A)" Content="|&#x25C0;" />
+                                    <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="a" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,6,0">
+                                    <Button x:Name="PrimaryBack" Style="{StaticResource ChromeButton}"
+                                            ToolTip="Primary back (Z · shift = 30s)" Content="&#x25C0;&#x25C0;" />
+                                    <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="z" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,6,0">
+                                    <Button x:Name="PrimaryToggle" Style="{StaticResource AccentButton}"
+                                            ToolTip="Play / pause primary (X)" Content="&#x2759;&#x2759;" />
+                                    <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="x" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,14,0">
+                                    <Button x:Name="PrimaryForward" Style="{StaticResource ChromeButton}"
+                                            ToolTip="Primary forward (C · shift = 30s)" Content="&#x25B6;&#x25B6;" />
+                                    <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="c" />
+                                </StackPanel>
+                                <TextBlock x:Name="PrimaryTimeText" FontSize="12" Height="26"
+                                           Foreground="{StaticResource FgQuiet}"
+                                           VerticalAlignment="Top" Padding="0,6,0,0" Text="00:00 / 00:00" />
+                            </StackPanel>
+                        </ContentControl>
+
+                        <ContentControl x:Name="PrimarySlot">
+                            <Border x:Name="PrimaryPane"
+                                    BorderBrush="{StaticResource EdgeStrong}" BorderThickness="1"
+                                    CornerRadius="6" Background="{StaticResource Black}" ClipToBounds="True">
+                                <DockPanel>
+                                    <Grid x:Name="PrimaryTrack" DockPanel.Dock="Bottom" Height="2">
+                                        <Border Background="{StaticResource TrackBrush}" />
+                                        <Border x:Name="PrimaryProgress" Background="{StaticResource Accent}"
+                                                HorizontalAlignment="Left" Width="0" />
+                                    </Grid>
+                                    <Grid>
+                                        <StackPanel x:Name="PrimaryPlaceholder" VerticalAlignment="Center"
+                                                    HorizontalAlignment="Center">
+                                            <TextBlock Text="PRIMARY VIDEO" FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11" Foreground="{StaticResource FgDim}"
+                                                       HorizontalAlignment="Center" />
+                                            <TextBlock x:Name="PrimaryTitleText" FontSize="15" Margin="0,8,0,0"
+                                                       Foreground="{StaticResource FgSoft}"
+                                                       HorizontalAlignment="Center" Text="nothing loaded" />
+                                        </StackPanel>
+                                        <pb:SurfaceHost x:Name="PrimaryHost" />
+                                    </Grid>
+                                </DockPanel>
+                            </Border>
+                        </ContentControl>
+                    </DockPanel>
+
+                    <GridSplitter x:Name="Splitter" Grid.Column="1" Width="4"
+                                  HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                                  Background="{StaticResource Edge}" ResizeBehavior="PreviousAndNext"
+                                  ToolTip="Drag to resize" />
+
+                    <!-- numbered -->
+                    <DockPanel x:Name="NumberedSection" Grid.Column="2">
+                        <Grid x:Name="NumberedTransportRow" DockPanel.Dock="Bottom" Margin="0,11,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <StackPanel Margin="0,0,6,0">
+                                    <Button x:Name="AllRestart" Style="{StaticResource ChromeButton}"
+                                            ToolTip="All numbered to start (K)" Content="|&#x25C0;" />
+                                    <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="k" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,6,0">
+                                    <Button x:Name="AllBack" Style="{StaticResource ChromeButton}"
+                                            ToolTip="All numbered back (, · shift = 30s)" Content="&#x25C0;&#x25C0;" />
+                                    <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="," />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,6,0">
+                                    <Button x:Name="AllToggle" Style="{StaticResource AccentDimButton}"
+                                            ToolTip="Play / pause all numbered (.)" Content="&#x2759;&#x2759;" />
+                                    <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="." />
+                                </StackPanel>
+                                <StackPanel>
+                                    <Button x:Name="AllForward" Style="{StaticResource ChromeButton}"
+                                            ToolTip="All numbered forward (/ · shift = 30s)" Content="&#x25B6;&#x25B6;" />
+                                    <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="/" />
+                                </StackPanel>
+
+                                <!-- The primary transport moves in here on the wall, where the
+                                     primary column is gone. -->
+                                <Border x:Name="TransportDivider" Width="1" Height="22" Margin="20,0"
+                                        Background="{StaticResource Hairline}" VerticalAlignment="Top"
+                                        Visibility="Collapsed" />
+                                <ContentControl x:Name="ExtraTransportSlot" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid x:Name="TileArea" />
+                    </DockPanel>
+                </Grid>
+            </DockPanel>
+        </Grid>
+
+        <!-- ── multi-screen: this display carries picture only ──────────── -->
+        <DockPanel x:Name="PrimaryOnly" Visibility="Collapsed" Background="{StaticResource Black}">
+            <Border x:Name="PrimaryOnlyBar" DockPanel.Dock="Top" Height="30"
+                    Background="{StaticResource Bg}"
+                    BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1">
+                <StackPanel Orientation="Horizontal" Margin="12,0" HorizontalAlignment="Right">
+                    <TextBlock x:Name="PrimaryOnlyTitle" Style="{StaticResource Meta}"
+                               VerticalAlignment="Center" Margin="0,0,12,0"
+                               TextTrimming="CharacterEllipsis" MaxWidth="420" />
+                    <Button x:Name="FullscreenButton" Style="{StaticResource HeaderChip}"
+                            ToolTip="Fullscreen this display (F)" Content="fullscreen" />
+                </StackPanel>
+            </Border>
+            <ContentControl x:Name="PrimaryOnlySlot" />
+        </DockPanel>
+
+        <!-- Drawn last, so hiding covers whatever arrangement is in use. The video
+             surfaces are parked at the same time, since a hosted window would otherwise
+             paint straight over this. -->
+        <Border x:Name="Curtain" Background="Black" Visibility="Collapsed" />
+    </Grid>
+</Window>
