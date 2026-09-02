@@ -39,15 +39,48 @@ recipient can replace the library — by construction:
 
 When you publish a build, include:
 
-1. The licence text (`licenses/LGPL-2.1.txt`).
+1. The licence texts (`licenses/`).
 2. This notice, or an equivalent attribution to VideoLAN.
-3. A pointer to the library source: <https://code.videolan.org/videolan/vlc>.
+3. **Corresponding source for the exact LibVLC used** — version 3.0.20 here, not "latest".
+   GPL §3(a) is satisfied by shipping it alongside the release; §3(b) by a written offer
+   good for three years. In practice: attach the matching VideoLAN release tarball, or the
+   `VideoLAN.LibVLC.Windows` 3.0.20 package, and name the version in the release notes.
+   Do not rely on a bare link to the project's tip, which will move.
 
-The single-file build (`-p:PublishProfile=SingleFile`) bundles those DLLs into the
-executable and unpacks them at startup. They are still loaded dynamically as separate
-files, so replacement remains possible in principle — but it is a good deal less obvious
-than a folder of DLLs. **The folder build is the cleaner thing to publish**; keep the
-single file for internal convenience.
+### The single-file build
+
+`-p:PublishProfile=SingleFile` bundles those DLLs into the executable and unpacks them at
+startup. Whether that still counts as a "suitable shared library mechanism" is worth being
+precise about, so it was tested rather than assumed:
+
+> A `libvlc.dll` in the unpack directory was replaced with a deliberately broken 64-byte
+> file. The app then failed to initialise LibVLC and never opened its main window; the
+> substituted file was left untouched. Restoring the real DLL made it start again.
+
+So the extracted libraries **are** loaded from disk as ordinary DLLs, and a user's modified
+copy **is** honoured — .NET neither verifies nor restores them. LGPL 2.1 §6(b)(2), "will
+operate properly with a modified version of the library, if the user installs one", is
+therefore satisfied in substance.
+
+Two honest caveats:
+
+- The unpack directory is `%TEMP%\.net\MultiPlayer\<content-hash>\` — discoverable, but
+  nobody would guess it. Any release shipping the single file should say so.
+- A substitution is not durable. Delete that directory and the next launch restores the
+  bundled originals.
+- §6(b)(1) speaks of using "a copy of the library already present on the user's computer
+  system, rather than copying library functions into the executable". The single-file build
+  plainly copies the library into the executable, so that clause reads against it even
+  though the observed behaviour matches (b)(2).
+
+**This matters less than it looks, because this project is GPL-2.0-or-later.** LGPL 2.1 §3
+expressly permits distributing LGPL code under the GPL instead, and the GPL has no
+relinking requirement at all — its condition is complete corresponding source for the whole
+distributed work. So the operative obligation for *either* build is the one in the next
+section, not LGPL §6.
+
+The folder build remains the better default: obligations aside, replacing a DLL next to the
+executable is something a user can actually do.
 
 ## GPL plugins: read this before publishing binaries
 
