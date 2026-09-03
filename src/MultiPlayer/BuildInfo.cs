@@ -14,6 +14,19 @@ public static class BuildInfo
 
     public static string Title => $"Multi-Video Player {Version}";
 
+    /// <summary>
+    /// The SDK appends the full 40-character commit hash after a '+'. Seven is enough to
+    /// identify a commit and keeps the window title readable.
+    /// </summary>
+    private static string Shorten(string version)
+    {
+        var plus = version.IndexOf('+');
+        if (plus < 0) return version;
+
+        var build = version[(plus + 1)..];
+        return build.Length > 7 ? $"{version[..plus]}+{build[..7]}" : version;
+    }
+
     private static string Read()
     {
         try
@@ -21,7 +34,7 @@ public static class BuildInfo
             var assembly = Assembly.GetEntryAssembly() ?? typeof(BuildInfo).Assembly;
             var informational = assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-            if (!string.IsNullOrWhiteSpace(informational)) return informational!;
+            if (!string.IsNullOrWhiteSpace(informational)) return Shorten(informational!);
             return assembly.GetName().Version?.ToString() ?? "unknown";
         }
         catch
