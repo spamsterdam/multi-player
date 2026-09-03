@@ -15,6 +15,14 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+
+    <!-- Without these every build reports 1.0.0.0, so a bug report cannot say which
+         build it came from. CI overrides InformationalVersion with the commit SHA. -->
+    <Version>0.1.0</Version>
+    <InformationalVersion>0.1.0-dev</InformationalVersion>
+    <Product>Multi-Video Player</Product>
+    <Company>Multi-Video Player</Company>
+    <Copyright>GPL-2.0-or-later</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

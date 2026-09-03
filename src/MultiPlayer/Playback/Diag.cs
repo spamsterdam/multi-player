@@ -16,9 +16,21 @@ public static class Diag
 
     private static readonly object Gate = new();
 
+    private static int _headerWritten;
+
     public static void Log(string message)
     {
         if (!Enabled) return;
+
+        // First line of any trace says which build produced it.
+        if (Interlocked.Exchange(ref _headerWritten, 1) == 0)
+            Write($"--- Multi-Video Player {MultiPlayer.BuildInfo.Version} ---");
+
+        Write(message);
+    }
+
+    private static void Write(string message)
+    {
         try
         {
             lock (Gate)

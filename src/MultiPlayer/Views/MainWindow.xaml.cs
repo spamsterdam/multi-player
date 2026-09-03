@@ -54,6 +54,9 @@ public partial class MainWindow : Window, IShellCommands
         _controller = controller;
         InitializeComponent();
 
+        // Carry the build in the title so a screenshot identifies its own version.
+        Title = BuildInfo.Title;
+
         PlaylistList.ItemsSource = _rows;
         ScreenPicker.DisplayMemberPath = nameof(MonitorInfo.Label);
 
