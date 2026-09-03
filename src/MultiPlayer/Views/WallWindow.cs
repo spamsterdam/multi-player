@@ -30,7 +30,7 @@ public sealed class WallWindow : Window
         ResizeMode = ResizeMode.NoResize;
         WindowStartupLocation = WindowStartupLocation.Manual;
         ShowInTaskbar = false;
-        // The operator works wherever the chrome is; opening the wall must not yank focus
+        // The operator works wherever the control surface is; opening the wall must not yank focus
         // across displays mid-keystroke.
         ShowActivated = false;
         Background = Brushes.Black;
@@ -39,14 +39,14 @@ public sealed class WallWindow : Window
 
         var root = new Grid();
         root.Children.Add(_slot);
-        root.Children.Add(_curtain);   // last child, so it covers the chrome when shown
+        root.Children.Add(_curtain);   // last child, so it covers the control surface when shown
         Content = root;
 
         KeyHook.Attach(this, (key, shift) => KeyRouter.Handle(controller, key, shift, shell));
     }
 
     /// <summary>Takes the control surface handed over from the main window.</summary>
-    public void Host(UIElement? chrome) => _slot.Content = chrome;
+    public void Host(UIElement? controls) => _slot.Content = controls;
 
     /// <summary>Blacks the window out without disturbing what it holds.</summary>
     public void SetCurtain(bool on)
