@@ -35,8 +35,8 @@
     <FontFamily x:Key="UiFont">Inter, Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas, Courier New</FontFamily>
 
-    <!-- Chrome button: quiet outline that warms up on hover. -->
-    <Style x:Key="ChromeButton" TargetType="Button">
+    <!-- Tool button: quiet outline that warms up on hover. -->
+    <Style x:Key="ToolButton" TargetType="Button">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="{StaticResource Edge}" />
         <Setter Property="Foreground" Value="{StaticResource FgSoft}" />
@@ -78,19 +78,19 @@
     </Style>
 
     <!-- The primary action in each transport group. -->
-    <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource ChromeButton}">
+    <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource ToolButton}">
         <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
         <Setter Property="Foreground" Value="{StaticResource AccentPale}" />
         <Setter Property="MinWidth" Value="40" />
     </Style>
 
-    <Style x:Key="AccentDimButton" TargetType="Button" BasedOn="{StaticResource ChromeButton}">
+    <Style x:Key="AccentDimButton" TargetType="Button" BasedOn="{StaticResource ToolButton}">
         <Setter Property="BorderBrush" Value="{StaticResource AccentDim}" />
         <Setter Property="Foreground" Value="{StaticResource AccentBright}" />
         <Setter Property="MinWidth" Value="40" />
     </Style>
 
-    <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource ChromeButton}">
+    <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource ToolButton}">
         <Setter Property="Height" Value="22" />
         <Setter Property="Width" Value="22" />
         <Setter Property="MinWidth" Value="22" />
@@ -98,7 +98,7 @@
         <Setter Property="Foreground" Value="{StaticResource FgMuted}" />
     </Style>
 
-    <Style x:Key="HeaderChip" TargetType="Button" BasedOn="{StaticResource ChromeButton}">
+    <Style x:Key="HeaderChip" TargetType="Button" BasedOn="{StaticResource ToolButton}">
         <Setter Property="Height" Value="22" />
         <Setter Property="Foreground" Value="{StaticResource FgMuted}" />
     </Style>

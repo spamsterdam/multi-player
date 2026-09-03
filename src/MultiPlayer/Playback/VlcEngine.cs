@@ -15,7 +15,7 @@ public sealed class VlcEngine : IDisposable
 
         var options = new List<string>
         {
-            "--no-osd",                 // nothing drawn over the frame but our own chrome
+            "--no-osd",                 // nothing drawn over the frame but our own controls
             "--no-video-title-show",
             "--no-spu",                 // no subtitle rendering pass
             "--no-sub-autodetect-file",

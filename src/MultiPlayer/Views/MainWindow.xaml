@@ -14,14 +14,18 @@
         Background="{StaticResource Bg}">
 
     <!--
-        Root holds two arrangements. In single-screen mode Chrome is shown here with the
-        primary picture sitting in PrimarySlot. In multi-screen mode Chrome is moved
-        wholesale onto the wall window and PrimaryOnly takes over here, so the primary
-        display carries nothing but picture and a fullscreen control.
+        Root holds two arrangements. ControlSurface is every control in the app (playlist,
+        header, transports, favorites, legend) gathered into one element, so it can be
+        relocated in a single move.
+
+        In single-screen mode ControlSurface is shown here with the primary picture sitting in
+        PrimarySlot. In multi-screen mode ControlSurface is moved wholesale onto the wall window
+        and PrimaryOnly takes over here, so the primary display carries nothing but
+        picture and a fullscreen control.
     -->
     <Grid x:Name="Root">
 
-        <Grid x:Name="Chrome">
+        <Grid x:Name="ControlSurface">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="SidebarColumn" Width="236" />
                 <ColumnDefinition Width="*" />
@@ -45,9 +49,9 @@
                         <StackPanel>
                             <Button x:Name="AddButton" Style="{StaticResource AccentButton}"
                                     Height="28" Content="Add files…" />
-                            <Button x:Name="OpenButton" Style="{StaticResource ChromeButton}"
+                            <Button x:Name="OpenButton" Style="{StaticResource ToolButton}"
                                     Height="26" Margin="0,7,0,0" Content="Open playlist…" />
-                            <Button x:Name="SaveButton" Style="{StaticResource ChromeButton}"
+                            <Button x:Name="SaveButton" Style="{StaticResource ToolButton}"
                                     Height="26" Margin="0,7,0,0" Content="Save as .mvp…" />
                         </StackPanel>
                     </Border>
@@ -192,12 +196,12 @@
                         <ContentControl x:Name="PrimaryTransportSlot" DockPanel.Dock="Bottom" Margin="0,11,0,0">
                             <StackPanel x:Name="PrimaryTransport" Orientation="Horizontal">
                                 <StackPanel Margin="0,0,6,0">
-                                    <Button x:Name="PrimaryRestart" Style="{StaticResource ChromeButton}"
+                                    <Button x:Name="PrimaryRestart" Style="{StaticResource ToolButton}"
                                             ToolTip="Primary to start (A)" Content="|&#x25C0;" />
                                     <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="a" />
                                 </StackPanel>
                                 <StackPanel Margin="0,0,6,0">
-                                    <Button x:Name="PrimaryBack" Style="{StaticResource ChromeButton}"
+                                    <Button x:Name="PrimaryBack" Style="{StaticResource ToolButton}"
                                             ToolTip="Primary back (Z · shift = 30s)" Content="&#x25C0;&#x25C0;" />
                                     <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="z" />
                                 </StackPanel>
@@ -207,7 +211,7 @@
                                     <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="x" />
                                 </StackPanel>
                                 <StackPanel Margin="0,0,14,0">
-                                    <Button x:Name="PrimaryForward" Style="{StaticResource ChromeButton}"
+                                    <Button x:Name="PrimaryForward" Style="{StaticResource ToolButton}"
                                             ToolTip="Primary forward (C · shift = 30s)" Content="&#x25B6;&#x25B6;" />
                                     <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="c" />
                                 </StackPanel>
@@ -259,12 +263,12 @@
                         <Grid x:Name="NumberedTransportRow" DockPanel.Dock="Bottom" Margin="0,11,0,0">
                             <StackPanel Orientation="Horizontal">
                                 <StackPanel Margin="0,0,6,0">
-                                    <Button x:Name="AllRestart" Style="{StaticResource ChromeButton}"
+                                    <Button x:Name="AllRestart" Style="{StaticResource ToolButton}"
                                             ToolTip="All numbered to start (K)" Content="|&#x25C0;" />
                                     <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="k" />
                                 </StackPanel>
                                 <StackPanel Margin="0,0,6,0">
-                                    <Button x:Name="AllBack" Style="{StaticResource ChromeButton}"
+                                    <Button x:Name="AllBack" Style="{StaticResource ToolButton}"
                                             ToolTip="All numbered back (, · shift = 30s)" Content="&#x25C0;&#x25C0;" />
                                     <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="," />
                                 </StackPanel>
@@ -274,7 +278,7 @@
                                     <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="." />
                                 </StackPanel>
                                 <StackPanel>
-                                    <Button x:Name="AllForward" Style="{StaticResource ChromeButton}"
+                                    <Button x:Name="AllForward" Style="{StaticResource ToolButton}"
                                             ToolTip="All numbered forward (/ · shift = 30s)" Content="&#x25B6;&#x25B6;" />
                                     <TextBlock Style="{StaticResource KeyCap}" Margin="0,3,0,0" Text="/" />
                                 </StackPanel>

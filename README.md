@@ -17,8 +17,9 @@ key you press is in the position your fingers expect.
 
 **The wall carries the entire control surface**: playlist, header, both transports,
 favorites and legend all move there, so the primary display shows nothing but picture and
-a single fullscreen control. The chrome is *moved*, not duplicated — there is one
-definition of it and no chance of two copies drifting apart.
+a single fullscreen control. That control surface is *moved*, not copied: the same WPF
+elements are detached from one window and reattached to the other, so only one of them
+ever exists and two copies cannot drift apart.
 
 ---
 

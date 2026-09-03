@@ -35,7 +35,7 @@ public partial class MainWindow : Window, IShellCommands
     private List<MonitorInfo> _monitors = new();
     private bool _suspendLayout;
     private bool _showTitles = true;
-    private bool _chromeVisible = true;
+    private bool _controlsVisible = true;
     private int _rowsRevision = -1;
     private int _reportedUnreachable = -1;
 
@@ -68,7 +68,7 @@ public partial class MainWindow : Window, IShellCommands
         WireCommands();
         BuildTiles();
         BuildFavorites();
-        UpdateModeChrome();
+        UpdateModeControls();
 
         _timer = new DispatcherTimer(DispatcherPriority.Background)
         {
@@ -172,7 +172,7 @@ public partial class MainWindow : Window, IShellCommands
             };
             if (multi) cell.SetNumberBrush((Brush)Application.Current.Resources["AccentBright"]);
             cell.Activated += k => _controller.Select(k);
-            cell.SetCaptionVisible(_chromeVisible);
+            cell.SetCaptionVisible(_controlsVisible);
             Grid.SetRow(cell, i / cols);
             Grid.SetColumn(cell, i % cols);
             TileArea.Children.Add(cell);
@@ -328,7 +328,7 @@ public partial class MainWindow : Window, IShellCommands
         else PrimaryReasonText.Visibility = Visibility.Collapsed;
     }
 
-    private void UpdateModeChrome()
+    private void UpdateModeControls()
     {
         var multi = _controller.Mode == ScreenMode.Multi;
         ModeButton.Content = multi ? "switch to single screen" : "switch to multi-screen";
@@ -473,7 +473,7 @@ public partial class MainWindow : Window, IShellCommands
         {
             _wall = null;
             // On shutdown the wall is closed by OnClosing. Running ExitMulti then would
-            // move the chrome back, reload media and restart playback while the app is
+            // move the control surface back, reload media and restart playback while the app is
             // trying to exit, and the process never finishes coming down.
             if (_closing) return;
             if (_controller.Mode == ScreenMode.Multi) ExitMulti();
@@ -481,11 +481,11 @@ public partial class MainWindow : Window, IShellCommands
         _wall.Show();
 
         _controller.SetMode(ScreenMode.Multi);
-        MoveChromeToWall();
+        MoveControlsToWall();
         _suspendLayout = false;
 
         BuildTiles();
-        UpdateModeChrome();
+        UpdateModeControls();
         ApplyLayout();
         Activate();
 
@@ -497,7 +497,7 @@ public partial class MainWindow : Window, IShellCommands
         _suspendLayout = true;
         if (_fullscreen) ToggleFullscreen();
 
-        MoveChromeHome();
+        MoveControlsHome();
         var wall = _wall;
         _wall = null;
         wall?.Close();
@@ -506,39 +506,39 @@ public partial class MainWindow : Window, IShellCommands
         _suspendLayout = false;
 
         BuildTiles();
-        UpdateModeChrome();
+        UpdateModeControls();
         ApplyLayout();
         Activate();
     }
 
     /// <summary>
     /// Hands the whole control surface to the wall window. The elements are moved, not
-    /// rebuilt, so there is one definition of the chrome and no chance of two copies
-    /// drifting apart. Hosted video windows are parked as their containers are torn down,
-    /// and re-attached by the ApplyLayout that follows.
+    /// rebuilt, so only one of them ever exists and two copies cannot drift apart.
+    /// Hosted video windows are parked as their containers are torn down, and
+    /// re-attached by the ApplyLayout that follows.
     /// </summary>
-    private void MoveChromeToWall()
+    private void MoveControlsToWall()
     {
         if (_wall is null) return;
 
         PrimarySlot.Content = null;
         PrimaryTransportSlot.Content = null;
-        Root.Children.Remove(Chrome);
+        Root.Children.Remove(ControlSurface);
 
-        _wall.Host(Chrome);
+        _wall.Host(ControlSurface);
         PrimaryOnlySlot.Content = PrimaryPane;
         ExtraTransportSlot.Content = PrimaryTransport;
         PrimaryOnly.Visibility = Visibility.Visible;
     }
 
-    private void MoveChromeHome()
+    private void MoveControlsHome()
     {
         PrimaryOnly.Visibility = Visibility.Collapsed;
         PrimaryOnlySlot.Content = null;
         ExtraTransportSlot.Content = null;
 
         _wall?.Host(null);
-        if (!Root.Children.Contains(Chrome)) Root.Children.Insert(0, Chrome);
+        if (!Root.Children.Contains(ControlSurface)) Root.Children.Insert(0, ControlSurface);
 
         PrimarySlot.Content = PrimaryPane;
         PrimaryTransportSlot.Content = PrimaryTransport;
@@ -693,20 +693,20 @@ public partial class MainWindow : Window, IShellCommands
     /// <summary>Strips the control surface back to picture only.</summary>
     public void ToggleCaptions()
     {
-        _chromeVisible = !_chromeVisible;
-        _showTitles = _chromeVisible;
+        _controlsVisible = !_controlsVisible;
+        _showTitles = _controlsVisible;
 
-        var visibility = _chromeVisible ? Visibility.Visible : Visibility.Collapsed;
+        var visibility = _controlsVisible ? Visibility.Visible : Visibility.Collapsed;
         HeaderBar.Visibility = visibility;
         LegendBar.Visibility = visibility;
         FavoritesBar.Visibility = visibility;
         NumberedTransportRow.Visibility = visibility;
         Sidebar.Visibility = visibility;
-        SidebarColumn.Width = _chromeVisible ? new GridLength(236) : new GridLength(0);
-        Stage.Margin = new Thickness(_chromeVisible ? 17 : 6);
-        foreach (var cell in _tiles.Values) cell.SetCaptionVisible(_chromeVisible);
+        SidebarColumn.Width = _controlsVisible ? new GridLength(236) : new GridLength(0);
+        Stage.Margin = new Thickness(_controlsVisible ? 17 : 6);
+        foreach (var cell in _tiles.Values) cell.SetCaptionVisible(_controlsVisible);
 
-        _controller.Note(_chromeVisible ? "chrome on" : "picture only");
+        _controller.Note(_controlsVisible ? "controls on" : "picture only");
     }
 
     public void ToggleLegend()
