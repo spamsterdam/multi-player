@@ -142,6 +142,17 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Docked Top so it sits under the header and cannot be missed. Unlike the
+                     status readout this does not expire; it clears when the problem does. -->
+                <Border x:Name="AlertBar" DockPanel.Dock="Top" Padding="17,8"
+                        Background="{StaticResource AlertWash}"
+                        BorderBrush="{StaticResource AlertEdge}" BorderThickness="0,0,0,1"
+                        Visibility="Collapsed">
+                    <TextBlock x:Name="AlertText" FontSize="12"
+                               Foreground="{StaticResource AlertText}"
+                               TextTrimming="CharacterEllipsis" />
+                </Border>
+
                 <Border x:Name="LegendBar" DockPanel.Dock="Bottom" Height="30"
                         BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0">
                     <Grid Margin="17,0">
@@ -225,6 +236,11 @@
                                             <TextBlock x:Name="PrimaryTitleText" FontSize="15" Margin="0,8,0,0"
                                                        Foreground="{StaticResource FgSoft}"
                                                        HorizontalAlignment="Center" Text="nothing loaded" />
+                                            <TextBlock x:Name="PrimaryReasonText" FontSize="12" Margin="0,10,0,0"
+                                                       Foreground="{StaticResource AlertText}"
+                                                       HorizontalAlignment="Center" TextAlignment="Center"
+                                                       MaxWidth="620" TextWrapping="Wrap"
+                                                       Visibility="Collapsed" />
                                         </StackPanel>
                                         <pb:SurfaceHost x:Name="PrimaryHost" />
                                     </Grid>

@@ -115,11 +115,31 @@ public sealed class PlayerController : IDisposable
         {
             _lastAction = value;
             LastActionAt = DateTime.UtcNow;
+            LastActionIsFailure = false;
         }
     }
 
     /// <summary>When the last action was recorded, so the readout can fade itself out.</summary>
     public DateTime LastActionAt { get; private set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// True when the readout is reporting a failure rather than confirming an action. The
+    /// five-second expiry exists for confirmations like "muted"; a failure that erases
+    /// itself before it is read leaves a blank screen with no explanation.
+    /// </summary>
+    public bool LastActionIsFailure { get; private set; }
+
+    /// <summary>How many playlist entries could not be found on the last sweep.</summary>
+    public int UnreachableCount { get; private set; }
+
+    /// <summary>Total entries the last sweep looked at, so the count can be phrased.</summary>
+    public int CheckedCount { get; private set; }
+
+    /// <summary>
+    /// The drive or share the missing entries live under, when they share one — the single
+    /// most useful thing to name, since one unplugged share explains a whole dead playlist.
+    /// </summary>
+    public string UnreachableRoot { get; private set; } = "";
     public int SeekStep { get; set; } = 10;
     public int ShiftSeekStep { get; set; } = 30;
     public bool Loop { get; set; } = true;
@@ -165,6 +185,7 @@ public sealed class PlayerController : IDisposable
         ApplySet();
         ApplyAudio();
         LastAction = Playlist.Count > 0 ? $"loaded {Playlist.Count} videos" : "playlist empty";
+        StartReachabilitySweep();
         LogPlaylist("change");
         LayoutChanged?.Invoke();
         StateChanged?.Invoke();
@@ -260,6 +281,7 @@ public sealed class PlayerController : IDisposable
         ApplySet();
         ApplyAudio();
         LastAction = $"added {added.Count} ({Playlist.Count} in the playlist)";
+        StartReachabilitySweep();
         LogPlaylist("change");
         LayoutChanged?.Invoke();
         StateChanged?.Invoke();
@@ -692,6 +714,103 @@ public sealed class PlayerController : IDisposable
         StateChanged?.Invoke();
     }
 
+    // --- reachability ---------------------------------------------------------
+
+    private CancellationTokenSource? _sweep;
+
+    /// <summary>
+    /// Marks entries whose file cannot be found, so the UI can say why the screen is black
+    /// instead of just being black.
+    /// <para>
+    /// Runs off the UI thread and probes each distinct root once: an unplugged share costs
+    /// one timeout rather than one per entry, and a twelve-entry playlist on a dead host
+    /// does not freeze the app for a minute. Results are picked up by the next UI tick, so
+    /// nothing here has to marshal back.
+    /// </para>
+    /// </summary>
+    private void StartReachabilitySweep()
+    {
+        _sweep?.Cancel();
+        var cancel = new CancellationTokenSource();
+        _sweep = cancel;
+
+        var entries = Playlist.ToArray();
+        CheckedCount = entries.Length;
+        UnreachableCount = 0;
+        UnreachableRoot = "";
+        if (entries.Length == 0) return;
+
+        var token = cancel.Token;
+        Task.Run(() =>
+        {
+            try
+            {
+                var roots = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+                var missingRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var missing = 0;
+
+                foreach (var entry in entries)
+                {
+                    if (token.IsCancellationRequested) return;
+
+                    var root = RootOf(entry.Path);
+                    if (!roots.TryGetValue(root, out var live))
+                    {
+                        live = ProbeRoot(root);
+                        roots[root] = live;
+                    }
+
+                    // Short-circuit: a dead root means no per-file check is worth making.
+                    var found = live && Exists(entry.Path);
+                    entry.Missing = !found;
+                    if (found) continue;
+
+                    missing++;
+                    missingRoots.Add(root);
+                }
+
+                if (token.IsCancellationRequested) return;
+
+                UnreachableCount = missing;
+                // Naming a single root is useful; naming five is noise.
+                UnreachableRoot = missingRoots.Count == 1 ? missingRoots.First() : "";
+                Diag.Log($"reachability: {missing}/{entries.Length} unreachable, root '{UnreachableRoot}'");
+            }
+            catch (Exception ex)
+            {
+                // A sweep that dies must not take the playlist with it, nor retry forever.
+                Diag.Log($"reachability: sweep failed, {ex.GetType().Name}: {ex.Message}");
+            }
+        }, token);
+    }
+
+    private static string RootOf(string path)
+    {
+        try { return Path.GetPathRoot(path)?.TrimEnd('\\') ?? ""; }
+        catch { return ""; }
+    }
+
+    /// <summary>
+    /// Time-boxed, because a dead share does not fail fast. The probe thread is left to
+    /// finish in its own time; only the wait is bounded.
+    /// </summary>
+    private static bool ProbeRoot(string root)
+    {
+        if (string.IsNullOrEmpty(root)) return false;
+        try
+        {
+            var probe = Task.Run(() => Directory.Exists(root));
+            return probe.Wait(TimeSpan.FromSeconds(3)) && probe.Result;
+        }
+        catch { return false; }
+    }
+
+    private static bool Exists(string path)
+    {
+        try { return File.Exists(path); }
+        catch { return false; }
+    }
+
     /// <summary>Dumps the playlist and what is on air, for tracing.</summary>
     public void LogPlaylist(string why)
     {
@@ -712,6 +831,14 @@ public sealed class PlayerController : IDisposable
     public void Note(string action)
     {
         LastAction = action;
+        StateChanged?.Invoke();
+    }
+
+    /// <summary>Reports a failure. Unlike <see cref="Note"/> this does not time out.</summary>
+    public void Warn(string problem)
+    {
+        LastAction = problem;
+        LastActionIsFailure = true;
         StateChanged?.Invoke();
     }
 

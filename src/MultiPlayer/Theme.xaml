@@ -27,6 +27,11 @@
     <SolidColorBrush x:Key="TrackBrush" Color="#1FE9E9ED" />
     <SolidColorBrush x:Key="Black" Color="#FF000000" />
 
+    <!-- Something is wrong: warm enough to read against the dark, not alarm-red. -->
+    <SolidColorBrush x:Key="AlertText" Color="#FFE8886B" />
+    <SolidColorBrush x:Key="AlertEdge" Color="#FF8A4033" />
+    <SolidColorBrush x:Key="AlertWash" Color="#26E8886B" />
+
     <FontFamily x:Key="UiFont">Inter, Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas, Courier New</FontFamily>
 

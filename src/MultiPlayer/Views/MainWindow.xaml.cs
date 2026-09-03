@@ -37,6 +37,7 @@ public partial class MainWindow : Window, IShellCommands
     private bool _showTitles = true;
     private bool _chromeVisible = true;
     private int _rowsRevision = -1;
+    private int _reportedUnreachable = -1;
 
     private bool _closing;
     private bool _hidden;
@@ -208,9 +209,12 @@ public partial class MainWindow : Window, IShellCommands
         var used = new HashSet<PlayerSurface>();
 
         var primary = _controller.Primary;
-        var hasPrimary = primary.HasMedia;
-        PrimaryHost.Visibility = hasPrimary ? Visibility.Visible : Visibility.Collapsed;
-        PrimaryPlaceholder.Visibility = hasPrimary ? Visibility.Collapsed : Visibility.Visible;
+        // A missing file still counts as "has media" to LibVLC, but there is no picture to
+        // show, so the placeholder has to take over or the reason is painted over by black.
+        var hasPicture = primary.HasMedia && primary.Entry?.Missing != true;
+        PrimaryHost.Visibility = hasPicture ? Visibility.Visible : Visibility.Collapsed;
+        PrimaryPlaceholder.Visibility = hasPicture ? Visibility.Collapsed : Visibility.Visible;
+        var hasPrimary = hasPicture;
         if (hasPrimary)
         {
             PrimaryHost.SetSurface(primary);
@@ -223,7 +227,7 @@ public partial class MainWindow : Window, IShellCommands
             if (!_tiles.TryGetValue(key, out var cell) || cell.Host is not { } host) continue;
             var surface = _controller.Tile(key);
 
-            if (surface is not null && surface.HasMedia)
+            if (surface is not null && surface.HasMedia && surface.Entry?.Missing != true)
             {
                 host.Visibility = Visibility.Visible;
                 host.SetSurface(surface);
@@ -264,13 +268,61 @@ public partial class MainWindow : Window, IShellCommands
             : $"{_controller.Playlist.Count} videos · {_controller.TotalSets} sets of {_controller.PageSize}";
         MuteButton.Content = _controller.GlobalMute ? "unmute" : "mute";
 
-        // The readout is a confirmation, not a status line: let it go after 5s.
-        LastActionText.Text = DateTime.UtcNow - _controller.LastActionAt < TimeSpan.FromSeconds(5)
-            ? _controller.LastAction
-            : "";
+        // The readout is a confirmation, not a status line: let it go after 5s — unless it
+        // is reporting a failure, which must stay until something supersedes it.
+        var fresh = DateTime.UtcNow - _controller.LastActionAt < TimeSpan.FromSeconds(5);
+        LastActionText.Text = fresh || _controller.LastActionIsFailure ? _controller.LastAction : "";
+        LastActionText.Foreground = (Brush)Application.Current.Resources[
+            _controller.LastActionIsFailure ? "AlertText" : "AccentDeep"];
+
+        RefreshUnreachable();
 
         foreach (var (key, cell) in _tiles) cell.Update(_controller.Tile(key), _showTitles);
         RefreshArmedState();
+    }
+
+    /// <summary>
+    /// Says why the screen is black. Three places, because one unplugged share can take out
+    /// a whole playlist and a wall of black rectangles otherwise reads as a broken build.
+    /// </summary>
+    private void RefreshUnreachable()
+    {
+        var missing = _controller.UnreachableCount;
+        var total = _controller.CheckedCount;
+
+        // The sweep answers a few seconds after the layout was applied. Re-apply once when
+        // its verdict changes, or a surface stays attached painting black over the reason.
+        if (missing != _reportedUnreachable)
+        {
+            _reportedUnreachable = missing;
+            ApplyLayout();
+        }
+
+        if (missing == 0 || total == 0)
+        {
+            AlertBar.Visibility = Visibility.Collapsed;
+            PrimaryReasonText.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var root = _controller.UnreachableRoot;
+        var where = string.IsNullOrEmpty(root) ? "" : $" — nothing found under {root}";
+        AlertText.Text = missing == total
+            ? $"None of these {total} files can be reached{where}. Check the drive or share is connected."
+            : $"{missing} of {total} files cannot be reached{where}.";
+        AlertBar.Visibility = Visibility.Visible;
+
+        // The placeholder is where the eye goes when the picture is black, so put the
+        // reason there too rather than only in a bar at the top.
+        var primary = _controller.Primary.Entry;
+        if (primary?.Missing == true)
+        {
+            PrimaryReasonText.Text = string.IsNullOrEmpty(root)
+                ? "this file cannot be reached"
+                : $"cannot be reached — {root} is not responding";
+            PrimaryReasonText.Visibility = Visibility.Visible;
+        }
+        else PrimaryReasonText.Visibility = Visibility.Collapsed;
     }
 
     private void UpdateModeChrome()

@@ -25,12 +25,20 @@ public sealed class TileCell : Border
     private readonly Grid _caption;
     private readonly Brush _idleEdge;
     private readonly Brush _hotEdge;
+    private readonly Brush _alertEdge;
+    private readonly Brush _alertText;
+    private readonly Brush _captionText;
+    private readonly Brush _timeText;
 
     public TileCell(int key, bool withVideo, double numberSize, ResourceDictionary res)
     {
         Key = key;
         _idleEdge = (Brush)res["Edge"];
         _hotEdge = (Brush)res["AccentDeep"];
+        _alertEdge = (Brush)res["AlertEdge"];
+        _alertText = (Brush)res["AlertText"];
+        _captionText = (Brush)res["FgMuted"];
+        _timeText = (Brush)res["FgDim"];
 
         Background = (Brush)res["BgSunken"];
         BorderBrush = _idleEdge;
@@ -102,7 +110,7 @@ public sealed class TileCell : Border
         Child = root;
 
         MouseEnter += (_, _) => BorderBrush = _hotEdge;
-        MouseLeave += (_, _) => BorderBrush = _idleEdge;
+        MouseLeave += (_, _) => BorderBrush = _missing ? _alertEdge : _idleEdge;
         MouseLeftButtonUp += (_, _) => Activated?.Invoke(Key);
     }
 
@@ -150,14 +158,25 @@ public sealed class TileCell : Border
     public int Key { get; }
     public SurfaceHost? Host { get; }
 
+    private bool _missing;
+
     public event Action<int>? Activated;
 
     public void Update(PlayerSurface? surface, bool showTitles)
     {
         var entry = surface?.Entry;
-        _title.Text = entry is null ? "empty" : (showTitles ? entry.Name : "");
-        _time.Text = entry is null ? "" : Format(surface!.Time);
+        var missing = entry?.Missing == true;
+        _missing = missing;
+
+        _title.Text = entry is null ? "empty" : (showTitles || missing ? entry.Name : "");
+        _time.Text = entry is null ? "" : missing ? "unreachable" : Format(surface!.Time);
         _number.Opacity = entry is null ? 0.35 : 1.0;
+
+        // Say it in three places at once — colour alone reads as a style choice, and on a
+        // wall of nine black rectangles one red filename is easy to miss.
+        _title.Foreground = missing ? _alertText : _captionText;
+        _time.Foreground = missing ? _alertText : _timeText;
+        BorderBrush = missing ? _alertEdge : _idleEdge;
 
         var width = _progressTrack.ActualWidth;
         _progressFill.Width = width > 0 ? Math.Max(0, width * (surface?.Fraction ?? 0)) : 0;
