@@ -1,0 +1,244 @@
+name: release
+
+# Tag to publish:  git tag v0.1.0 && git push origin v0.1.0
+# Or run by hand from the Actions tab to rehearse into a draft, which publishes
+# nothing until you say so.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for a rehearsal build, e.g. 0.1.0-rc1'
+        required: false
+        default: '0.0.0-dev'
+
+permissions:
+  contents: write   # the minimum needed to create a release
+
+jobs:
+  release:
+    runs-on: windows-latest   # WPF is Windows-only
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Work out the version
+        id: version
+        shell: pwsh
+        run: |
+          # A tag push names the version; a manual run is a rehearsal and is
+          # never published as anything but a draft.
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $tag = $env:GITHUB_REF -replace '^refs/tags/', ''
+            $version = $tag -replace '^v', ''
+            $draft = 'false'
+          } else {
+            $version = '${{ github.event.inputs.version }}'
+            $tag = "v$version"
+            $draft = 'true'
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag"         >> $env:GITHUB_OUTPUT
+          "draft=$draft"     >> $env:GITHUB_OUTPUT
+          Write-Host "Building $version (tag $tag, draft=$draft)"
+
+      - name: Read the dependency versions from the project
+        id: deps
+        shell: pwsh
+        run: |
+          # Never hardcode these. GPL section 3 wants corresponding source for the
+          # exact binaries shipped, so the source URLs must be derived from what
+          # the build actually references, or a package bump silently ships the
+          # source for the wrong version.
+          [xml]$proj = Get-Content src/MultiPlayer/MultiPlayer.csproj
+          $refs = $proj.Project.ItemGroup.PackageReference
+          $libvlc = ($refs | Where-Object { $_.Include -eq 'VideoLAN.LibVLC.Windows' }).Version
+          $sharp  = ($refs | Where-Object { $_.Include -eq 'LibVLCSharp' }).Version
+          if (-not $libvlc -or -not $sharp) { throw 'Could not read the LibVLC package versions.' }
+          "libvlc=$libvlc"     >> $env:GITHUB_OUTPUT
+          "libvlcsharp=$sharp" >> $env:GITHUB_OUTPUT
+          Write-Host "LibVLC $libvlc, LibVLCSharp $sharp"
+
+      # InformationalVersion is passed WITHOUT a commit hash on purpose. The SDK
+      # appends "+<full sha>" itself, and appends it even to a value that already
+      # carries one, giving "0.1.0+abc1234.29bb8f9...". Let the SDK do it once.
+      - name: Publish (framework-dependent)
+        shell: pwsh
+        run: |
+          dotnet publish src/MultiPlayer/MultiPlayer.csproj -c Release -r win-x64 `
+            --self-contained false `
+            -p:Version=${{ steps.version.outputs.version }} `
+            -p:InformationalVersion=${{ steps.version.outputs.version }} `
+            -o dist/framework-dependent
+
+      - name: Publish (self-contained)
+        shell: pwsh
+        run: |
+          dotnet publish src/MultiPlayer/MultiPlayer.csproj -c Release -r win-x64 `
+            --self-contained true `
+            -p:Version=${{ steps.version.outputs.version }} `
+            -p:InformationalVersion=${{ steps.version.outputs.version }} `
+            -o dist/self-contained
+
+      - name: Check the builds are complete
+        shell: pwsh
+        run: |
+          # A zip missing libvlc or its plugins looks fine and plays nothing, which
+          # is worth catching here rather than in a bug report.
+          foreach ($d in 'dist/framework-dependent', 'dist/self-contained') {
+            $exe = Join-Path $d 'MultiPlayer.exe'
+            if (-not (Test-Path $exe)) { throw "$exe is missing." }
+            if (-not (Test-Path "$d/libvlc/win-x64/libvlc.dll")) { throw "$d has no libvlc.dll." }
+            $plugins = @(Get-ChildItem "$d/libvlc/win-x64/plugins" -Recurse -Filter *.dll -ErrorAction SilentlyContinue)
+            if ($plugins.Count -lt 100) { throw "$d has only $($plugins.Count) plugins." }
+            $stamped = (Get-Item $exe).VersionInfo.ProductVersion
+            Write-Host "$d  ok  ($($plugins.Count) plugins, version $stamped)"
+          }
+
+      - name: Add the licence payload to both builds
+        shell: pwsh
+        run: |
+          # A build that ships LibVLC has to carry its notices, so put them inside
+          # the zip rather than relying on someone finding the repository.
+          foreach ($d in 'dist/framework-dependent', 'dist/self-contained') {
+            Copy-Item LICENSE, THIRD-PARTY-NOTICES.md, README.md $d
+            Copy-Item licenses $d/licenses -Recurse
+          }
+
+      - name: Fetch corresponding source for the GPL components
+        shell: pwsh
+        run: |
+          # GPL section 3(a): accompany the binaries with their source. Attaching it
+          # discharges the obligation outright, with nothing to honour for years afterwards.
+          New-Item -ItemType Directory -Force dist/source | Out-Null
+          $libvlc = '${{ steps.deps.outputs.libvlc }}'
+          $sharp  = '${{ steps.deps.outputs.libvlcsharp }}'
+          Invoke-WebRequest "https://download.videolan.org/vlc/$libvlc/vlc-$libvlc.tar.xz" `
+            -OutFile "dist/source/vlc-$libvlc.tar.xz" -UseBasicParsing
+          Invoke-WebRequest "https://github.com/videolan/libvlcsharp/archive/refs/tags/$sharp.tar.gz" `
+            -OutFile "dist/source/libvlcsharp-$sharp.tar.gz" -UseBasicParsing
+          Get-ChildItem dist/source | ForEach-Object { "{0}  {1:N1} MB" -f $_.Name, ($_.Length/1MB) }
+
+      - name: Package
+        shell: pwsh
+        run: |
+          # ZipFile rather than Compress-Archive: these are ~400 MB across ~1200
+          # files, where Compress-Archive takes minutes.
+          #
+          # Entry names are built by hand with forward slashes rather than using
+          # CreateFromDirectory, which takes its separator from the host: on
+          # Windows PowerShell it writes backslashes, producing an archive that is
+          # malformed per the zip spec and unpacks as files literally named
+          # "libvlc\win-x64\libvlc.dll" outside Explorer. pwsh gets this right, but
+          # not depending on which shell runs it is cheaper than depending on it.
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $v = '${{ steps.version.outputs.version }}'
+          New-Item -ItemType Directory -Force dist/assets | Out-Null
+          $assets = (Resolve-Path dist/assets).Path
+          $level  = [System.IO.Compression.CompressionLevel]::Optimal
+          $builds = @{
+            'framework-dependent' = "multi-player-$v-win-x64.zip"
+            'self-contained'      = "multi-player-$v-win-x64-self-contained.zip"
+          }
+          foreach ($b in $builds.GetEnumerator()) {
+            $src = (Resolve-Path "dist/$($b.Key)").Path.TrimEnd('\', '/')
+            $zip = [System.IO.Compression.ZipFile]::Open((Join-Path $assets $b.Value), 'Create')
+            try {
+              foreach ($f in Get-ChildItem $src -Recurse -File) {
+                $name = $f.FullName.Substring($src.Length + 1).Replace('\', '/')
+                [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                  $zip, $f.FullName, $name, $level)
+              }
+            } finally { $zip.Dispose() }
+          }
+
+          # The zip is what people actually receive, so check inside it rather than
+          # trusting that the folder it was built from was right.
+          foreach ($b in $builds.GetEnumerator()) {
+            $zip = [System.IO.Compression.ZipFile]::OpenRead((Join-Path $assets $b.Value))
+            try {
+              $names = $zip.Entries.FullName
+              foreach ($want in 'MultiPlayer.exe', 'LICENSE', 'THIRD-PARTY-NOTICES.md',
+                                'licenses/GPL-2.0.txt', 'licenses/LGPL-2.1.txt',
+                                'libvlc/win-x64/libvlc.dll') {
+                if ($names -notcontains $want) { throw "$($b.Value) is missing $want." }
+              }
+              $plugins = @($names | Where-Object { $_ -like 'libvlc/win-x64/plugins/*' }).Count
+              if ($plugins -lt 100) { throw "$($b.Value) has only $plugins plugins." }
+              Write-Host "$($b.Value)  ok  ($($names.Count) entries, $plugins plugins)"
+            } finally { $zip.Dispose() }
+          }
+          Copy-Item dist/source/* dist/assets
+
+          # Checksums over everything that will be published.
+          Push-Location dist/assets
+          Get-ChildItem -File | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content SHA256SUMS.txt -Encoding ascii
+          Get-ChildItem -File | ForEach-Object { "{0,-52} {1,7:N1} MB" -f $_.Name, ($_.Length/1MB) }
+          Get-Content SHA256SUMS.txt
+          Pop-Location
+
+      - name: Write the release notes
+        shell: pwsh
+        run: |
+          $v      = '${{ steps.version.outputs.version }}'
+          $tag    = '${{ steps.version.outputs.tag }}'
+          $libvlc = '${{ steps.deps.outputs.libvlc }}'
+          $sharp  = '${{ steps.deps.outputs.libvlcsharp }}'
+          $repo   = '${{ github.server_url }}/${{ github.repository }}'
+          @"
+          ## Which download
+
+          | | |
+          | --- | --- |
+          | ``multi-player-$v-win-x64-self-contained.zip`` | Runs on a clean Windows machine. Nothing to install. Larger. |
+          | ``multi-player-$v-win-x64.zip`` | Smaller, but needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0). |
+
+          Unzip and run ``MultiPlayer.exe``. Keep the ``libvlc\win-x64`` folder beside it —
+          that is LibVLC and its plugins, loaded from disk at runtime, and you may replace
+          them with your own build.
+
+          The binaries are **unsigned**, so SmartScreen will warn on first run.
+
+          Check a download against ``SHA256SUMS.txt``:
+
+          ``````
+          Get-FileHash .\multi-player-$v-win-x64.zip -Algorithm SHA256
+          ``````
+
+          ## Licence
+
+          GPL-2.0-or-later. Video playback is LibVLC $libvlc by VideoLAN, through
+          LibVLCSharp $sharp. Corresponding source for both is attached to this release,
+          which is what GPL section 3(a) asks for. See ``THIRD-PARTY-NOTICES.md`` in the zip.
+
+          Source for this release: <$repo/tree/$tag>
+          "@ | Set-Content dist/notes.md -Encoding utf8
+          Get-Content dist/notes.md
+
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The preinstalled gh CLI, rather than a third-party action, so nothing
+          # outside GitHub's own tooling is handed a write-scoped token. Built as an
+          # argument array: an empty string would otherwise be passed as an empty
+          # argument when the run is not a draft.
+          $gh = @(
+            'release', 'create', '${{ steps.version.outputs.tag }}'
+            '--title', 'Multi-Video Player ${{ steps.version.outputs.version }}'
+            '--notes-file', 'dist/notes.md'
+          )
+          if ('${{ steps.version.outputs.draft }}' -eq 'true') { $gh += '--draft' }
+          $gh += (Get-ChildItem dist/assets -File | ForEach-Object { $_.FullName })
+          gh @gh
+          if ($LASTEXITCODE -ne 0) { throw "gh release create failed ($LASTEXITCODE)." }

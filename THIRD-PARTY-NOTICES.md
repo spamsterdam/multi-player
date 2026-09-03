@@ -25,6 +25,20 @@ redistribution and no obligation beyond attribution.
 
 **Obligations attach when you publish a build.** Everything below is about that.
 
+### What the releases here do about it
+
+The release workflow discharges these automatically, so a published build is compliant
+without anyone having to remember the steps:
+
+- The licence texts, this notice and the README are copied **inside both zips**, not merely
+  left in the repository.
+- The matching source archives — `vlc-<version>.tar.xz` and the LibVLCSharp tarball — are
+  **attached to every release**, which is GPL §3(a) satisfied outright rather than by a
+  written offer to honour for three years.
+- Those versions are read out of `MultiPlayer.csproj` at build time rather than written
+  into the workflow, so bumping a package cannot silently ship source for a different
+  version than the binaries.
+
 ## LGPL-2.1: libvlc and LibVLCSharp
 
 Both packages declare `LGPL-2.1-or-later`. Distributing a build of this app alongside them

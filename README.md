@@ -22,11 +22,24 @@ definition of it and no chance of two copies drifting apart.
 
 ---
 
+## Download
+
+Built copies are on the [releases page](../../releases), in two flavours:
+
+| | |
+| --- | --- |
+| `multi-player-<version>-win-x64-self-contained.zip` | Runs on a clean Windows machine. Nothing to install. Larger. |
+| `multi-player-<version>-win-x64.zip` | Smaller, but needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0). |
+
+Unzip and run `MultiPlayer.exe`. The binaries are unsigned, so SmartScreen will warn on
+first run. Each release also carries `SHA256SUMS.txt` and the corresponding source for the
+LibVLC components — see [Licence](#licence).
+
 ## Requirements
 
 - Windows 10/11, x64
-- [.NET SDK 7.0](https://dotnet.microsoft.com/download) or newer to build
-  (the project targets `net7.0-windows`; the runtime is not needed separately if you
+- [.NET SDK 10.0](https://dotnet.microsoft.com/download) or newer to build
+  (the project targets `net10.0-windows`; the runtime is not needed separately if you
   publish self-contained)
 - Nothing else — LibVLC ships with the app via NuGet
 
@@ -48,7 +61,7 @@ A standalone build:
 
 ```powershell
 dotnet publish -c Release -r win-x64 --self-contained false
-# output: src\MultiPlayer\bin\Release\net7.0-windows\win-x64\publish\
+# output: src\MultiPlayer\bin\Release\net10.0-windows\win-x64\publish\
 ```
 
 The `libvlc\win-x64` folder must stay next to `MultiPlayer.exe`.
