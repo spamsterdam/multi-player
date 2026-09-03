@@ -9,3 +9,6 @@ samples/*.mvp
 
 # per-playlist thumbnail cache
 .multiplayer/
+
+# agent scratch: worktrees and session state, none of which belongs in a public repo
+.claude/
