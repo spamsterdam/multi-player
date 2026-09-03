@@ -51,38 +51,20 @@ dotnet publish -c Release -r win-x64 --self-contained false
 # output: src\MultiPlayer\bin\Release\net7.0-windows\win-x64\publish\
 ```
 
-The `libvlc\win-x64` folder must stay next to `MultiPlayer.exe` — see below.
+The `libvlc\win-x64` folder must stay next to `MultiPlayer.exe`.
 
-### A single .exe
+**Why that folder exists.** LibVLC is not one library: it is `libvlccore.dll` plus **367
+plugin DLLs, 131 MB of them**, which it loads from disk at runtime by scanning a `plugins`
+directory. Codecs alone account for 46 MB. None of it can be linked into a managed
+assembly, because .NET never loads those files — libvlc does, by path. Shipping it as a
+folder is also what keeps the library replaceable, which the licence it carries depends on
+— see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-```powershell
-dotnet publish -c Release -p:PublishProfile=SingleFile
-# output: src\MultiPlayer\bin\SingleFile\MultiPlayer.exe   (~121 MB, nothing else)
-```
-
-Self-contained, so the target machine needs no .NET runtime either.
-
-**Why the folder exists at all.** LibVLC is not one library: it is `libvlccore.dll` plus
-**367 plugin DLLs, 131 MB of them**, which it loads from disk at runtime by scanning a
-`plugins` directory. Codecs alone account for 46 MB. None of that can be linked into a
-managed assembly, because .NET never loads those files — libvlc does, by path.
-
-The single-file profile works around that rather than removing it: every plugin is bundled
-into the exe and unpacked beside the extracted runtime on first launch, where libvlc finds
-them the usual way. Measured here:
-
-| | Folder build | Single file |
-| --- | --- | --- |
-| On disk | 263 MB, ~380 files | 121 MB, one file |
-| First launch | 0.7s | **8.5s**, unpacking ~390 MB into `%TEMP%\.net\` |
-| Later launches | 0.6s | 0.8s |
-
-So the single exe costs a one-off unpack and a few hundred MB of temp space, then behaves
-the same. Trimming is not worth attempting: `PublishTrimmed` would strip types LibVLCSharp
-reaches by reflection, and it cannot touch the native plugins that are nearly all of the
-size. Deleting whole plugin folders by hand does work if you know what your media needs —
-`gui` (18.9 MB) and `access_output` + `stream_out` (8.8 MB) are dead weight for a player —
-but that trades formats away for megabytes.
+Trimming does not help: `PublishTrimmed` would strip types LibVLCSharp reaches by
+reflection, and it cannot touch the native plugins that are nearly all of the size.
+Deleting whole plugin folders by hand does work if you know what your media needs — `gui`
+(18.9 MB) and `access_output` + `stream_out` (8.8 MB) are dead weight for a player — but
+that trades formats away for megabytes.
 
 ### Command line
 
